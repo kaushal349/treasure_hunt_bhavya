@@ -217,8 +217,14 @@ async function renderAdmin() {
   const activeTeams = allTeams.filter(t => !t.eliminated && !t.completed).length;
   const eliminatedTeams = allTeams.filter(t => t.eliminated).length;
 
+  const phaseCounts = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  allTeams.forEach(t => {
+    if (t.completed) phaseCounts[4]++;
+    else phaseCounts[t.phase]++;
+  });
+
   appContainer.innerHTML = `
-    <div class="glass-panel" style="max-width: 800px; width:95%;">
+    <div class="glass-panel" style="max-width: 900px; width:95%;">
       <div style="text-align:center; margin-bottom: var(--space-6);">
         <span class="badge">Admin Hub</span>
         <h2 style="margin-bottom: var(--space-2);">Event Control Panel</h2>
@@ -231,50 +237,48 @@ async function renderAdmin() {
       </div>
 
       <div class="admin-tabs" style="display:flex; gap:var(--space-2); border-bottom:1px solid var(--border-subtle); padding-bottom:var(--space-3); margin-bottom:var(--space-6);">
-        <button class="tab-btn active" data-tab="tabTeams">👥 Teams & QR</button>
-        <button class="tab-btn" data-tab="tabLeaderboard">🏆 Leaderboard</button>
+        <button class="tab-btn active" data-tab="tabTeams">👥 Teams & Overrides</button>
+        <button class="tab-btn" data-tab="tabLeaderboard">🏆 Leaderboard & Analytics</button>
         <button class="tab-btn" data-tab="tabData">⚙️ Data & Sync</button>
       </div>
 
       <div id="tabTeams" class="tab-content active">
-        <div style="background:var(--bg-elevated); padding:var(--space-5); border-radius:var(--radius-md); border:1px solid var(--border-subtle); margin-bottom:var(--space-6);">
-          <h3>🔗 Registration Portal</h3>
-          <p style="text-align:left; margin-bottom:var(--space-4);">Generate QR code for teams to scan and register locally.</p>
-          <button class="btn-primary" id="addTeamBtn" style="margin-top:0;">Generate QR Code</button>
-          
-          <div id="qrContainer" style="text-align:center; display:none; margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--border-subtle);">
-            <div id="qrcode" class="qr-box"></div><br/>
-            <a id="qrLink" href="#" target="_blank" class="btn-secondary" style="display:inline-block; margin-top:0; width:auto; text-decoration:none;">Open Registration Link</a>
-          </div>
+        <div style="margin-bottom: var(--space-4); display:flex; gap:var(--space-2);">
+          <input type="text" id="adminSearch" placeholder="🔍 Search by Team Name, Email, or Phone..." style="flex:1; margin-bottom:0;" />
         </div>
 
         <h3>📋 Registered Teams (${allTeams.length})</h3>
-        <div class="teams-scroll-list" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
-          ${allTeams.length === 0 ? '<p>No teams registered yet.</p>' : allTeams.map(t => {
-            const statusColor = t.eliminated ? 'var(--brand-danger)' : (t.completed ? 'var(--brand-primary)' : 'var(--brand-success)');
-            const statusText = t.eliminated ? 'Eliminated' : (t.completed ? 'Completed' : 'Active');
-            return `
-              <div class="team-item">
-                <div style="text-align:left;">
-                  <strong style="font-size: 0.95rem;">${t.teamName}</strong><br/>
-                  <small style="color:var(--text-muted);">${t.p1} · ${t.p2}</small><br/>
-                  <small style="color:var(--text-muted);">📧 ${t.email} · 📞 ${t.phone}</small><br/>
-                  <small style="color:var(--text-muted);">Phase ${t.phase} · Marks: P1(${t.phaseMarks[1]||0}) P2(${t.phaseMarks[2]||0}) P3(${t.phaseMarks[3]||0})</small>
-                </div>
-                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:var(--space-2);">
-                  <div style="font-weight:700; font-size:0.75rem; padding:0.25rem 0.6rem; border-radius:var(--radius-full); background:${statusColor}15; color:${statusColor}; border:1px solid ${statusColor}30;">${statusText}</div>
-                  <button class="btn-outline delete-btn" style="border-color:var(--brand-danger); color:var(--brand-danger);" data-filename="${t._filename}">Trash</button>
-                </div>
-              </div>
-            `;
-          }).join('')}
+        <div class="teams-scroll-list" id="teamsListContainer" style="max-height: 500px; overflow-y: auto; padding-right: 5px;">
+          <!-- List injected via renderTeamsList -->
         </div>
       </div>
 
       <div id="tabLeaderboard" class="tab-content">
+        <h3>📊 Phase Distribution</h3>
+        <div class="analytics-chart" style="display:flex; flex-direction:column; gap:var(--space-3); background:var(--bg-elevated); padding:var(--space-5); border-radius:var(--radius-md); border:1px solid var(--border-subtle); margin-bottom:var(--space-6);">
+          ${[1,2,3].map(p => {
+            const count = phaseCounts[p];
+            const pct = totalTeams > 0 ? (count / totalTeams) * 100 : 0;
+            return `
+              <div style="display:flex; align-items:center; gap:var(--space-3);">
+                <div style="width:70px; font-size:0.85rem; font-weight:600;">Phase ${p}</div>
+                <div style="flex:1; background:rgba(255,255,255,0.05); height:16px; border-radius:var(--radius-full); overflow:hidden;">
+                  <div style="width:${pct}%; background:linear-gradient(90deg, var(--brand-primary), var(--brand-primary-soft)); height:100%;"></div>
+                </div>
+                <div style="width:30px; font-size:0.85rem; text-align:right;">${count}</div>
+              </div>
+            `;
+          }).join('')}
+          <div style="display:flex; align-items:center; gap:var(--space-3);">
+            <div style="width:70px; font-size:0.85rem; font-weight:600;">Completed</div>
+            <div style="flex:1; background:rgba(255,255,255,0.05); height:16px; border-radius:var(--radius-full); overflow:hidden;">
+              <div style="width:${totalTeams > 0 ? (phaseCounts[4] / totalTeams) * 100 : 0}%; background:linear-gradient(90deg, var(--brand-success), #10B981); height:100%;"></div>
+            </div>
+            <div style="width:30px; font-size:0.85rem; text-align:right;">${phaseCounts[4]}</div>
+          </div>
+        </div>
+
         <h3>🏆 Live Ranking</h3>
-        <p style="text-align:left;">Teams ranked by Phase and Total Marks.</p>
-        
         <div style="overflow-x:auto;">
           <table class="admin-table" style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left;">
             <thead>
@@ -292,17 +296,15 @@ async function renderAdmin() {
                   if(a.phase !== b.phase) return b.phase - a.phase;
                   return b.totalScore - a.totalScore;
                 });
-                return sorted.map((t, index) => {
-                  return `
-                    <tr style="border-bottom:1px solid var(--border-subtle);">
-                      <td style="padding:var(--space-3); font-weight:700;">#${index+1}</td>
-                      <td style="padding:var(--space-3);"><strong>${t.teamName}</strong></td>
-                      <td style="padding:var(--space-3);">${t.phase}</td>
-                      <td style="padding:var(--space-3);">${t.totalScore}</td>
-                      <td style="padding:var(--space-3);">${t.eliminated ? '💀' : (t.completed ? '🏆' : '🟢')}</td>
-                    </tr>
-                  `;
-                }).join('');
+                return sorted.map((t, index) => `
+                  <tr style="border-bottom:1px solid var(--border-subtle);">
+                    <td style="padding:var(--space-3); font-weight:700;">#${index+1}</td>
+                    <td style="padding:var(--space-3);"><strong>${t.teamName}</strong></td>
+                    <td style="padding:var(--space-3);">${t.completed ? 'End' : t.phase}</td>
+                    <td style="padding:var(--space-3);">${t.totalScore}</td>
+                    <td style="padding:var(--space-3);">${t.eliminated ? '💀' : (t.completed ? '🏆' : '🟢')}</td>
+                  </tr>
+                `).join('');
               })()}
             </tbody>
           </table>
@@ -334,6 +336,133 @@ async function renderAdmin() {
       </div>
     </div>
   `;
+
+  function renderTeamsList(filterText = '') {
+    const container = document.getElementById('teamsListContainer');
+    if (!container) return;
+
+    const filtered = allTeams.filter(t => {
+      const searchStr = `${t.teamName || ''} ${t.email || ''} ${t.phone || ''}`.toLowerCase();
+      return searchStr.includes(filterText.toLowerCase());
+    });
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<p>No teams found matching search criteria.</p>';
+      return;
+    }
+
+    container.innerHTML = filtered.map(t => {
+      const statusColor = t.eliminated ? 'var(--brand-danger)' : (t.completed ? 'var(--brand-primary)' : 'var(--brand-success)');
+      const statusText = t.eliminated ? 'Eliminated' : (t.completed ? 'Completed' : 'Active');
+      return `
+        <div class="team-item" style="flex-direction:column; align-items:stretch;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="text-align:left;">
+              <strong style="font-size: 0.95rem;">${t.teamName}</strong><br/>
+              <small style="color:var(--text-muted);">${t.p1} · ${t.p2}</small><br/>
+              <small style="color:var(--text-muted);">📧 ${t.email} · 📞 ${t.phone}</small><br/>
+              <small style="color:var(--text-muted);">Phase ${t.phase} · Quiz Marks: P1(${t.phaseMarks[1]||0}) P2(${t.phaseMarks[2]||0}) P3(${t.phaseMarks[3]||0})</small>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:var(--space-2);">
+              <div style="font-weight:700; font-size:0.75rem; padding:0.25rem 0.6rem; border-radius:var(--radius-full); background:${statusColor}15; color:${statusColor}; border:1px solid ${statusColor}30;">${statusText}</div>
+              <div style="display:flex; gap:var(--space-2);">
+                <button class="btn-outline edit-toggle-btn" style="padding:0.3rem 0.6rem; font-size:0.8rem;" data-id="${t.teamId}">🔧 Override</button>
+                <button class="btn-outline delete-btn" style="border-color:var(--brand-danger); color:var(--brand-danger); padding:0.3rem 0.6rem; font-size:0.8rem;" data-filename="${t._filename}">Trash</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="edit-${t.teamId}" class="edit-panel" style="display:none; margin-top:var(--space-4); padding-top:var(--space-4); border-top:1px solid var(--border-subtle);">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-3);">
+              <div>
+                <label style="font-size:0.8rem; display:block; margin-bottom:var(--space-1);">Total Score</label>
+                <input type="number" id="sc-${t.teamId}" value="${t.totalScore}" style="margin-bottom:0;" />
+              </div>
+              <div>
+                <label style="font-size:0.8rem; display:block; margin-bottom:var(--space-1);">Current Phase</label>
+                <input type="number" id="ph-${t.teamId}" value="${t.phase}" style="margin-bottom:0;" />
+              </div>
+            </div>
+            <div style="display:flex; gap:var(--space-2); margin-top:var(--space-3);">
+              <button class="btn-primary save-override-btn" style="margin-top:0; padding:0.4rem;" data-id="${t.teamId}" data-orig='${JSON.stringify(t)}'>Save Override</button>
+              <button class="btn-secondary cancel-edit-btn" style="margin-top:0; padding:0.4rem;" data-id="${t.teamId}">Cancel</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    bindTeamListEvents();
+  }
+
+  function bindTeamListEvents() {
+    document.querySelectorAll('.edit-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.dataset.id;
+        const panel = document.getElementById(`edit-${id}`);
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+      });
+    });
+
+    document.querySelectorAll('.cancel-edit-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.target.dataset.id;
+        document.getElementById(`edit-${id}`).style.display = 'none';
+      });
+    });
+
+    document.querySelectorAll('.save-override-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.target.dataset.id;
+        const origData = JSON.parse(e.target.dataset.orig);
+        const newScore = parseInt(document.getElementById(`sc-${id}`).value);
+        const newPhase = parseInt(document.getElementById(`ph-${id}`).value);
+
+        origData.totalScore = newScore;
+        origData.phase = newPhase;
+
+        try {
+          const response = await fetch('/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(origData)
+          });
+          if (response.ok) {
+            showToast('Override saved successfully!', 'success');
+            renderAdmin();
+          } else {
+            showToast('Failed to save override.', 'error');
+          }
+        } catch (err) {
+          showToast('Failed to save override.', 'error');
+        }
+      });
+    });
+
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const filename = e.target.dataset.filename;
+        if (confirm(`Are you sure you want to delete this team?`)) {
+          try {
+            await fetch(`/api/delete/${filename}`, { 
+              method: 'DELETE',
+              headers: { 'X-Admin-Key': state.adminSecret || 'Summer$26' }
+            });
+            showToast('Entry deleted successfully.', 'success');
+            renderAdmin();
+          } catch (err) {
+            showToast('Failed to delete entry.', 'error');
+          }
+        }
+      });
+    });
+  }
+
+  renderTeamsList();
+
+  document.getElementById('adminSearch').addEventListener('keyup', (e) => {
+    renderTeamsList(e.target.value);
+  });
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -392,41 +521,6 @@ async function renderAdmin() {
       }
     };
     reader.readAsText(file);
-  });
-
-  document.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const filename = e.target.dataset.filename;
-      if (confirm(`Are you sure you want to delete this team?`)) {
-        try {
-          await fetch(`/api/delete/${filename}`, { 
-            method: 'DELETE',
-            headers: { 'X-Admin-Key': state.adminSecret || 'Summer$26' }
-          });
-          showToast('Entry deleted successfully.', 'success');
-          renderAdmin();
-        } catch (err) {
-          showToast('Failed to delete entry.', 'error');
-        }
-      }
-    });
-  });
-
-  document.getElementById('addTeamBtn').addEventListener('click', () => {
-    const baseUrl = window.location.href.split('?')[0];
-    const regUrl = `${baseUrl}?mode=register`;
-    
-    document.getElementById('qrContainer').style.display = 'block';
-    document.getElementById('qrcode').innerHTML = '';
-    
-    new QRCode(document.getElementById('qrcode'), {
-      text: regUrl,
-      width: 200,
-      height: 200
-    });
-    
-    document.getElementById('qrLink').href = regUrl;
-    showToast('QR Code Generated!');
   });
 }
 
