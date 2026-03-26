@@ -202,7 +202,6 @@ function renderAdminAuth() {
 }
 
 async function renderAdmin() {
-  let teamsListHTML = '';
   let allTeams = [];
   
   try {
@@ -211,72 +210,201 @@ async function renderAdmin() {
     });
     allTeams = await response.json();
   } catch (err) {
-    console.warn('Could not fetch teams from server, falling back to localStorage:', err);
-    // Fallback to localStorage
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith('team_')) {
-        allTeams.push(JSON.parse(localStorage.getItem(key)));
-      }
-    }
+    console.warn('Could not fetch teams from server:', err);
   }
 
-  if (allTeams.length > 0) {
-    teamsListHTML = `<div style="margin-top: var(--space-8); border-top: 1px solid var(--border-subtle); padding-top: var(--space-6);">
-      <h3 style="text-align:left; margin-bottom: var(--space-4);">📋 Registered Teams (${allTeams.length})</h3>`;
-    allTeams.forEach(t => {
-      const statusColor = t.eliminated ? 'var(--brand-danger)' : (t.completed ? 'var(--brand-primary)' : 'var(--brand-success)');
-      const statusText = t.eliminated ? 'Eliminated' : (t.completed ? 'Completed' : 'Active');
-      teamsListHTML += `<div class="team-item">
-        <div style="text-align:left;">
-          <strong style="font-size: 0.95rem;">${t.teamName}</strong><br/>
-          <small style="color:var(--text-muted);">${t.p1} · ${t.p2}</small><br/>
-          <small style="color:var(--text-muted);">📧 ${t.email} · 📞 ${t.phone}</small><br/>
-          <small style="color:var(--text-muted);">Phase ${t.phase} · Marks: P1(${t.phaseMarks[1]||0}) P2(${t.phaseMarks[2]||0}) P3(${t.phaseMarks[3]||0})</small>
-        </div>
-        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:var(--space-2);">
-          <div style="font-weight:700; font-size:0.75rem; padding:0.25rem 0.6rem; border-radius:var(--radius-full); background:${statusColor}15; color:${statusColor}; border:1px solid ${statusColor}30; text-transform:uppercase; letter-spacing:0.5px;">${statusText}</div>
-          ${t._filename ? `<button class="btn-outline delete-btn" style="border-color:var(--brand-danger); color:var(--brand-danger);" data-filename="${t._filename}">Delete</button>` : ''}
-        </div>
-      </div>`;
-    });
-    teamsListHTML += `</div>`;
-  }
+  const totalTeams = allTeams.length;
+  const activeTeams = allTeams.filter(t => !t.eliminated && !t.completed).length;
+  const eliminatedTeams = allTeams.filter(t => t.eliminated).length;
 
   appContainer.innerHTML = `
-    <div class="glass-panel" style="max-width: 600px;">
+    <div class="glass-panel" style="max-width: 800px; width:95%;">
       <div style="text-align:center; margin-bottom: var(--space-6);">
-        <span class="badge">Admin</span>
+        <span class="badge">Admin Hub</span>
         <h2 style="margin-bottom: var(--space-2);">Event Control Panel</h2>
-        <p style="margin-bottom:0;">Generate a QR code for team registration.</p>
-      </div>
-      
-      <button class="btn-primary" id="addTeamBtn">Generate Registration QR Code</button>
-
-      <div id="qrContainer" style="text-align:center; display:none; margin-top: var(--space-8); padding-top: var(--space-6); border-top: 1px solid var(--border-subtle);">
-        <h3 id="qrTeamName">Scan to Register</h3>
-        <div id="qrcode" class="qr-box"></div>
-        <a id="qrLink" href="#" target="_blank" class="btn-secondary" style="display:inline-block; margin-top:var(--space-4); text-decoration:none; width:auto; padding: 0.5rem 1.5rem;">Open Registration Link</a>
       </div>
 
-      ${teamsListHTML}
-      
-      <button class="btn-secondary" style="margin-top: var(--space-8); color: var(--brand-danger); border-color: rgba(239,68,68,0.3);" onclick="if(confirm('This will erase ALL team data. Continue?')){localStorage.clear(); window.location.reload();}">⚠ Reset All Data</button>
+      <div class="stats-bar" style="margin-bottom: var(--space-6);">
+        <div class="stat-item"><span class="stat-label">Total Teams</span><span class="stat-value">${totalTeams}</span></div>
+        <div class="stat-item"><span class="stat-label">Active</span><span class="stat-value">${activeTeams}</span></div>
+        <div class="stat-item"><span class="stat-label">Eliminated</span><span class="stat-value" style="color:var(--brand-danger)">${eliminatedTeams}</span></div>
+      </div>
+
+      <div class="admin-tabs" style="display:flex; gap:var(--space-2); border-bottom:1px solid var(--border-subtle); padding-bottom:var(--space-3); margin-bottom:var(--space-6);">
+        <button class="tab-btn active" data-tab="tabTeams">👥 Teams & QR</button>
+        <button class="tab-btn" data-tab="tabLeaderboard">🏆 Leaderboard</button>
+        <button class="tab-btn" data-tab="tabData">⚙️ Data & Sync</button>
+      </div>
+
+      <div id="tabTeams" class="tab-content active">
+        <div style="background:var(--bg-elevated); padding:var(--space-5); border-radius:var(--radius-md); border:1px solid var(--border-subtle); margin-bottom:var(--space-6);">
+          <h3>🔗 Registration Portal</h3>
+          <p style="text-align:left; margin-bottom:var(--space-4);">Generate QR code for teams to scan and register locally.</p>
+          <button class="btn-primary" id="addTeamBtn" style="margin-top:0;">Generate QR Code</button>
+          
+          <div id="qrContainer" style="text-align:center; display:none; margin-top: var(--space-5); padding-top: var(--space-5); border-top: 1px solid var(--border-subtle);">
+            <div id="qrcode" class="qr-box"></div><br/>
+            <a id="qrLink" href="#" target="_blank" class="btn-secondary" style="display:inline-block; margin-top:0; width:auto; text-decoration:none;">Open Registration Link</a>
+          </div>
+        </div>
+
+        <h3>📋 Registered Teams (${allTeams.length})</h3>
+        <div class="teams-scroll-list" style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+          ${allTeams.length === 0 ? '<p>No teams registered yet.</p>' : allTeams.map(t => {
+            const statusColor = t.eliminated ? 'var(--brand-danger)' : (t.completed ? 'var(--brand-primary)' : 'var(--brand-success)');
+            const statusText = t.eliminated ? 'Eliminated' : (t.completed ? 'Completed' : 'Active');
+            return `
+              <div class="team-item">
+                <div style="text-align:left;">
+                  <strong style="font-size: 0.95rem;">${t.teamName}</strong><br/>
+                  <small style="color:var(--text-muted);">${t.p1} · ${t.p2}</small><br/>
+                  <small style="color:var(--text-muted);">📧 ${t.email} · 📞 ${t.phone}</small><br/>
+                  <small style="color:var(--text-muted);">Phase ${t.phase} · Marks: P1(${t.phaseMarks[1]||0}) P2(${t.phaseMarks[2]||0}) P3(${t.phaseMarks[3]||0})</small>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:var(--space-2);">
+                  <div style="font-weight:700; font-size:0.75rem; padding:0.25rem 0.6rem; border-radius:var(--radius-full); background:${statusColor}15; color:${statusColor}; border:1px solid ${statusColor}30;">${statusText}</div>
+                  <button class="btn-outline delete-btn" style="border-color:var(--brand-danger); color:var(--brand-danger);" data-filename="${t._filename}">Trash</button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div id="tabLeaderboard" class="tab-content">
+        <h3>🏆 Live Ranking</h3>
+        <p style="text-align:left;">Teams ranked by Phase and Total Marks.</p>
+        
+        <div style="overflow-x:auto;">
+          <table class="admin-table" style="width:100%; border-collapse:collapse; font-size:0.85rem; text-align:left;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border-default); color:var(--text-muted);">
+                <th style="padding:var(--space-3);">Rank</th>
+                <th style="padding:var(--space-3);">Team</th>
+                <th style="padding:var(--space-3);">Phase</th>
+                <th style="padding:var(--space-3);">Total Score</th>
+                <th style="padding:var(--space-3);">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(() => {
+                const sorted = [...allTeams].sort((a,b) => {
+                  if(a.phase !== b.phase) return b.phase - a.phase;
+                  return b.totalScore - a.totalScore;
+                });
+                return sorted.map((t, index) => {
+                  return `
+                    <tr style="border-bottom:1px solid var(--border-subtle);">
+                      <td style="padding:var(--space-3); font-weight:700;">#${index+1}</td>
+                      <td style="padding:var(--space-3);"><strong>${t.teamName}</strong></td>
+                      <td style="padding:var(--space-3);">${t.phase}</td>
+                      <td style="padding:var(--space-3);">${t.totalScore}</td>
+                      <td style="padding:var(--space-3);">${t.eliminated ? '💀' : (t.completed ? '🏆' : '🟢')}</td>
+                    </tr>
+                  `;
+                }).join('');
+              })()}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="tabData" class="tab-content">
+        <h3>💾 Cloud Persistence & Sync</h3>
+        <p style="text-align:left;">Since Render.com files reset on redeployment, use these tools to backup and restore state.</p>
+        
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-4); margin-bottom:var(--space-6);">
+          <div style="background:var(--bg-elevated); padding:var(--space-5); border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+            <h4>📤 Export State</h4>
+            <p style="text-align:left; font-size:0.8rem;">Download entire event state as a JSON file.</p>
+            <button class="btn-secondary" id="exportBtn">Download JSON</button>
+          </div>
+          
+          <div style="background:var(--bg-elevated); padding:var(--space-5); border-radius:var(--radius-md); border:1px solid var(--border-subtle);">
+            <h4>📥 Import / Restore</h4>
+            <p style="text-align:left; font-size:0.8rem;">Upload a previously exported JSON to restore teams.</p>
+            <input type="file" id="importFile" style="display:none;" accept=".json" />
+            <button class="btn-primary" onclick="document.getElementById('importFile').click()" style="margin-top:0;">Upload JSON</button>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid var(--border-subtle); padding-top:var(--space-4);">
+          <button class="btn-secondary" style="color: var(--brand-danger); border-color: rgba(239,68,68,0.3);" onclick="if(confirm('This will wipe local storage and reset UI. Continue?')){localStorage.clear(); window.location.reload();}">⚠ Reset Admin Panel</button>
+        </div>
+      </div>
     </div>
   `;
 
-  // Bind Delete buttons
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      
+      e.target.classList.add('active');
+      const tabId = e.target.dataset.tab;
+      document.getElementById(tabId).classList.add('active');
+    });
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', async () => {
+    try {
+      const response = await fetch('/api/admin/export', {
+        headers: { 'X-Admin-Key': state.adminSecret || 'Summer$26' }
+      });
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'treasure_hunt_backup.json';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      showToast('Backup downloaded successfully.', 'success');
+    } catch (err) {
+      showToast('Failed to export data.', 'error');
+    }
+  });
+
+  document.getElementById('importFile').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        const response = await fetch('/api/admin/import', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Admin-Key': state.adminSecret || 'Summer$26'
+          },
+          body: JSON.stringify(data)
+        });
+        if (response.ok) {
+          showToast('Data imported successfully!', 'success');
+          renderAdmin();
+        } else {
+          showToast('Failed to import data.', 'error');
+        }
+      } catch (err) {
+        showToast('Invalid JSON file.', 'error');
+      }
+    };
+    reader.readAsText(file);
+  });
+
   document.querySelectorAll('.delete-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       const filename = e.target.dataset.filename;
-      if (confirm(`Are you sure you want to delete file "${filename}"?`)) {
+      if (confirm(`Are you sure you want to delete this team?`)) {
         try {
           await fetch(`/api/delete/${filename}`, { 
             method: 'DELETE',
             headers: { 'X-Admin-Key': state.adminSecret || 'Summer$26' }
           });
           showToast('Entry deleted successfully.', 'success');
-          renderAdmin(); // refresh
+          renderAdmin();
         } catch (err) {
           showToast('Failed to delete entry.', 'error');
         }
@@ -291,7 +419,6 @@ async function renderAdmin() {
     document.getElementById('qrContainer').style.display = 'block';
     document.getElementById('qrcode').innerHTML = '';
     
-    // eslint-disable-next-line no-undef
     new QRCode(document.getElementById('qrcode'), {
       text: regUrl,
       width: 200,
@@ -494,14 +621,14 @@ function evaluateElimination(chosenCard) {
   // Qualification Threshold = (Max Marks * threshold%) + Card Bonus(3) + Card Return
   // Total Phase Score = Raw Phase Marks + Card Bonus(3) + Card Return
   
-  const thresholdRequirement = (maxPhaseMarks * pctThresholdReq) + 3 + chosenCard.return;
-  const teamPhaseScore = rawPhaseMarks + 3 + chosenCard.return;
+  const thresholdRequirement = Math.ceil(maxPhaseMarks * pctThresholdReq);
+  const teamPhaseScore = rawPhaseMarks + chosenCard.return - chosenCard.risk;
 
   if (teamPhaseScore < thresholdRequirement) {
     state.eliminated = true;
     state.eliminationReason = `Score ${teamPhaseScore} did not meet threshold ${thresholdRequirement}.<br/><br/>
-    <small style="color:var(--text-muted);">Threshold: (${maxPhaseMarks} × ${pctThresholdReq * 100}%) + 3 bonus + ${chosenCard.return} return = ${thresholdRequirement}<br/>
-    Your score: ${rawPhaseMarks} marks + 3 bonus + ${chosenCard.return} return = ${teamPhaseScore}</small>`;
+    <small style="color:var(--text-muted);">Threshold Required: ${maxPhaseMarks} marks × ${pctThresholdReq * 100}% = ${thresholdRequirement}<br/>
+    Your score: ${rawPhaseMarks} marks + ${chosenCard.return} (card return) - ${chosenCard.risk} (card risk) = ${teamPhaseScore}</small>`;
     saveState();
     return renderEliminated();
   }

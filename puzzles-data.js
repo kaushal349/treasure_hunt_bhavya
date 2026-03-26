@@ -102,22 +102,22 @@ var PUZZLE_TEXT = `
 #  PHASE 3 — FINANCE REBUS PUZZLES (10 Rounds)
 # ================================================================
 #  Solve finance-themed rebus puzzles using emoji clues.
-#  Teams type the answer. No multiple choice options needed.
+#  Multiple choice options are provided.
 #
-#  Format: Round | Type | Title | Question | Image | (blank) | (blank) | (blank) | (blank) | Answer
+#  Format: Round | Type | Title | Question | Image | Option A | Option B | Option C | Option D | Answer
 # ================================================================
 
 [PHASE 3 PUZZLES]
- 1 | quiz | Finance Rebus 1/10  | 💰📈 What does this represent?     | | Profit       | Revenue      | Income       | Earnings     | Profit
- 2 | quiz | Finance Rebus 2/10  | 🏦💸 What does this represent?     | | Bank Loan    | Bank Transfer| Bank Deposit | Bank Credit  | Bank Loan
- 3 | quiz | Finance Rebus 3/10  | 📉🔻 What does this represent?     | | Loss         | Recession    | Depreciation | Deficit      | Loss
- 4 | quiz | Finance Rebus 4/10  | 🪙🚀 What does this represent?     | | Bitcoin      | Ethereum     | Dogecoin     | Crypto Rally | Bitcoin
- 5 | quiz | Finance Rebus 5/10  | 🏠📊 What does this represent?     | | Real Estate Market | Housing Index | Property Value | Land Survey | Real Estate Market
- 6 | quiz | Finance Rebus 6/10  | 💹🟢 What does this represent?     | | Stock Uptrend| Bull Run     | Green Signal | Market Rally | Stock Uptrend
- 7 | quiz | Finance Rebus 7/10  | 💳💳 What does this represent?     | | Credit Card  | Debit Card   | Dual Card    | Card Payment | Credit Card
- 8 | quiz | Finance Rebus 8/10  | 🏛️📈 What does this represent?     | | Government Bonds | Treasury Bills | Sovereign Fund | Public Debt | Government Bonds
- 9 | quiz | Finance Rebus 9/10  | 🪙🪙🪙 What does this represent?   | | Cryptocurrency | Digital Currency | Virtual Coins | Token Economy | Cryptocurrency
-10 | quiz | Finance Rebus 10/10 | 📊⚡ What does this represent?     | | Volatility   | Market Shock | Flash Crash  | Price Swing  | Volatility
+ 1 | quiz | Finance Rebus 1/10 | 📉 + 😨 + 💸 | | Market Crash | Panic Selling | Bear Market | Loss Booking | Panic Selling
+ 2 | quiz | Finance Rebus 2/10 | 💰 + ⏳ + 📊 | | Discounting | Inflation | Time Value of Money | Interest Rate | Time Value of Money
+ 3 | quiz | Finance Rebus 3/10 | 📊 + ⚖️ + 💰 | | Portfolio Theory | Risk Analysis | Risk-Return Tradeoff | Asset Allocation | Risk-Return Tradeoff
+ 4 | quiz | Finance Rebus 4/10 | 💼 + 🔀 + 📈 | | Portfolio Diversification | Rebalancing | Fund Allocation | Hedging | Portfolio Diversification
+ 5 | quiz | Finance Rebus 5/10 | 📈 + 🚀 + 💥 | | Bull Run | Market Boom | Bubble Burst | Volatility | Bubble Burst
+ 6 | quiz | Finance Rebus 6/10 | 📈 + 👥 + 🧠 ❌ | | Market Efficiency | Herd Behaviour | Speculation | Momentum Investing | Herd Behaviour
+ 7 | quiz | Finance Rebus 7/10 | 💰 + ⏳ + 📉 | | Time Value of Money | Inflation Impact | Discounting | Inflation Erosion | Inflation Erosion
+ 8 | quiz | Finance Rebus 8/10 | 🏦 + 📄 + 🔁 + 📉 | | Repo Rate | Reverse Repo Rate | Loan Cycle | Debt Policy | Reverse Repo Rate
+ 9 | quiz | Finance Rebus 9/10 | 📈 + 🚀 + ❗ + 💥 | | Growth Stock | Market Rally | Bubble Formation | Bubble Burst Cycle | Bubble Burst Cycle
+10 | quiz | Finance Rebus 10/10 | 💰 + 📊 + 🧠 ❌ + 📉 | | Loss Aversion | Irrational Investing | Behavioral Bias | Overconfidence Bias | Irrational Investing
 
 
 # ================================================================
@@ -164,5 +164,4 @@ Gold             |  7 | 2 | 🪙
 Treasury Bond    |  5 | 1 | 🏦
 High Yield Bond  | 11 | 5 | ⚡
 Trap Card        | -5 | 0 | ☠️
-
 `;
