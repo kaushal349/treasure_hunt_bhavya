@@ -8,6 +8,18 @@ PORT = int(os.environ.get('PORT', 8000))
 DATA_DIR = "data"
 
 class MyHandler(http.server.SimpleHTTPRequestHandler):
+    def is_authorized(self):
+        if self.path == '/api/teams' or self.path.startswith('/api/delete/'):
+            key = self.headers.get('X-Admin-Key')
+            if key != 'Summer$26':
+                self.send_response(401)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Unauthorized"}).encode())
+                return False
+        return True
+
     def do_POST(self):
         if self.path == '/api/save':
             length = int(self.headers['Content-Length'])
@@ -34,6 +46,8 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == '/api/teams':
+            if not self.is_authorized():
+                return
             teams = []
             if os.path.exists(DATA_DIR):
                 for f in os.listdir(DATA_DIR):
@@ -56,6 +70,8 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
             super().do_GET()
 
     def do_DELETE(self):
+        if not self.is_authorized():
+            return
         if self.path.startswith('/api/delete/'):
             # The path will be /api/delete/team_id_timestamp.json
             filename = urllib.parse.unquote(self.path.split('/')[-1])

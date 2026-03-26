@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const mode = urlParams.get('mode');
 
   if (mode === 'admin') {
-    renderAdmin();
+    renderAdminAuth();
   } else if (mode === 'register') {
     renderRegister();
   } else {
@@ -96,9 +96,6 @@ function renderMainLanding() {
       </div>
       <button class="btn-primary" onclick="window.location.href='?mode=register'">
         Register Your Team →
-      </button>
-      <button class="btn-secondary" onclick="window.location.href='?mode=admin'">
-        Admin Dashboard
       </button>
     </div>
   `;
@@ -167,12 +164,51 @@ function renderRegister() {
   });
 }
 
+function renderAdminAuth() {
+  appContainer.innerHTML = `
+    <div class="glass-panel" style="max-width: 400px; text-align:center;">
+      <span class="badge">Security Lock</span>
+      <h2 style="margin-bottom: var(--space-4);">Admin Access</h2>
+      <p style="margin-bottom: var(--space-6);">Please enter the access key to unlock the Event Control Panel.</p>
+      
+      <input type="password" id="adminPassword" placeholder="Enter Password..." style="width:100%; padding:0.75rem 1rem; border-radius:var(--radius-md); border:1px solid var(--border-default); background:var(--bg-base); color:var(--text-primary); font-family:var(--font-sans); margin-bottom:var(--space-4); outline:none; text-align:center;" />
+      
+      <button class="btn-primary" id="unlockBtn" style="width:100%;">Unlock Dashboard</button>
+      <div id="authError" style="color:var(--brand-danger); font-size:0.82rem; margin-top:var(--space-3); height:15px;"></div>
+    </div>
+  `;
+
+  const input = document.getElementById('adminPassword');
+  input.focus();
+
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      document.getElementById('unlockBtn').click();
+    }
+  });
+
+  document.getElementById('unlockBtn').addEventListener('click', () => {
+    const pwd = input.value;
+    if (pwd === 'Summer$26') {
+      state.adminSecret = pwd; // Cache it for API calls
+      showToast('Unlock Successful!', 'success');
+      renderAdmin();
+    } else {
+      document.getElementById('authError').textContent = '✗ Invalid Password. Try again.';
+      input.value = '';
+      input.focus();
+    }
+  });
+}
+
 async function renderAdmin() {
   let teamsListHTML = '';
   let allTeams = [];
   
   try {
-    const response = await fetch('/api/teams');
+    const response = await fetch('/api/teams', {
+      headers: { 'X-Admin-Key': state.adminSecret || 'Summer$26' }
+    });
     allTeams = await response.json();
   } catch (err) {
     console.warn('Could not fetch teams from server, falling back to localStorage:', err);
@@ -235,7 +271,10 @@ async function renderAdmin() {
       const filename = e.target.dataset.filename;
       if (confirm(`Are you sure you want to delete file "${filename}"?`)) {
         try {
-          await fetch(`/api/delete/${filename}`, { method: 'DELETE' });
+          await fetch(`/api/delete/${filename}`, { 
+            method: 'DELETE',
+            headers: { 'X-Admin-Key': state.adminSecret || 'Summer$26' }
+          });
           showToast('Entry deleted successfully.', 'success');
           renderAdmin(); // refresh
         } catch (err) {
