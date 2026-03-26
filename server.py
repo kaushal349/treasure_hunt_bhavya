@@ -50,17 +50,24 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
             cursor = conn.cursor()
             
             try:
-                # Collapse session: Check if email or phone already exists
                 cursor.execute('SELECT team_id FROM teams WHERE email = ? OR phone = ?', (data['email'], data['phone']))
                 existing = cursor.fetchone()
                 
                 if existing:
-                    # Update existing record with the new state
+                    if existing[0] != data['teamId']:
+                        self.send_response(409)
+                        self.send_header('Content-Type', 'application/json')
+                        self.send_header('Access-Control-Allow-Origin', '*')
+                        self.end_headers()
+                        self.wfile.write(json.dumps({"success": False, "error": "Duplicate Email/Phone"}).encode())
+                        conn.close()
+                        return
+                    
                     cursor.execute('''
                         UPDATE teams 
                         SET team_name = ?, email = ?, phone = ?, phase = ?, total_score = ?, state_json = ?, updated_at = CURRENT_TIMESTAMP
-                        WHERE email = ? OR phone = ?
-                    ''', (data['teamName'], data['email'], data['phone'], data['phase'], data['totalScore'], json.dumps(data), data['email'], data['phone']))
+                        WHERE team_id = ?
+                    ''', (data['teamName'], data['email'], data['phone'], data['phase'], data['totalScore'], json.dumps(data), data['teamId']))
                     success = True
                 else:
                     cursor.execute('''
@@ -72,7 +79,8 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
             except sqlite3.IntegrityError:
                 success = False
             finally:
-                conn.close()
+                if 'conn' in locals() and conn:
+                    conn.close()
                 
             self.send_response(200 if success else 400)
             self.send_header('Content-Type', 'application/json')

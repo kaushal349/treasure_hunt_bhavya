@@ -137,30 +137,56 @@ function renderRegister() {
     </div>
   `;
 
-  document.getElementById('startHuntBtn').addEventListener('click', () => {
+  document.getElementById('startHuntBtn').addEventListener('click', async () => {
     const tName = document.getElementById('regTeamName').value.trim();
     const p1 = document.getElementById('regP1').value.trim();
     const p2 = document.getElementById('regP2').value.trim();
-    const email = document.getElementById('regEmail').value.trim();
+    const email = document.getElementById('regEmail').value.trim().toLowerCase();
     const phone = document.getElementById('regPhone').value.trim();
 
     if(!tName || !p1 || !p2 || !email || !phone) {
       return showToast("All fields are mandatory!", "error");
     }
 
-    // Initialize State
-    state.teamId = Date.now().toString(); // unique ID
-    state.teamName = tName;
-    state.p1 = p1;
-    state.p2 = p2;
-    state.email = email;
-    state.phone = phone;
-    state.phase = 1;
-    state.round = 1;
-    
-    saveState();
-    showToast(`Welcome Team ${tName}! Phase 1 Starting.`);
-    renderGameLoop();
+    if (!/^\d{10}$/.test(phone)) {
+      return showToast("Phone number must be exactly 10 digits!", "error");
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return showToast("Invalid email format!", "error");
+    }
+
+    const testId = Date.now().toString();
+    const draftState = {
+      teamId: testId,
+      teamName: tName,
+      p1, p2, email, phone,
+      phase: 1, round: 1, totalScore: 0,
+      phaseMarks: { 1: 0, 2: 0, 3: 0 },
+      portfolio: { returns: 0, risk: 0, cards: [] },
+      eliminated: false, eliminationReason: '',
+      completed: false, pendingCardPick: false
+    };
+
+    try {
+      const resp = await fetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(draftState)
+      });
+      if (!resp.ok) {
+        if (resp.status === 409) {
+          return showToast("Duplicate Email or Phone! Please contact admin.", "error");
+        }
+        return showToast("Validation failed on server.", "error");
+      }
+      
+      state = draftState;
+      saveState();
+      showToast(`Welcome Team ${tName}! Phase 1 Starting.`);
+      renderGameLoop();
+    } catch (err) {
+      showToast("Network error. Verification failed.", "error");
+    }
   });
 }
 
